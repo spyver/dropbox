@@ -1,0 +1,82 @@
+#!/bin/sh
+#
+# Copied from http://forums.dropbox.com/topic.php?id=38529#post-414344
+# Modified by jay@gooby.org (@jaygooby on Twitter)
+
+### BEGIN INIT INFO
+# Provides: dropbox
+# Required-Start: $local_fs $remote_fs $network $syslog $named
+# Required-Stop: $local_fs $remote_fs $network $syslog $named
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# X-Interactive: false
+# Short-Description: dropbox service
+### END INIT INFO
+
+# dropbox service
+DROPBOX_USERS="dropboxunixuser"
+
+start() {
+  echo "Starting dropbox..."
+  for dbuser in $DROPBOX_USERS; do
+    HOMEDIR=$(getent passwd $dbuser | cut -d: -f6)
+
+    DAEMON=$(find $HOMEDIR/.dropbox-dist/dropbox-lnx.* -name dropboxd)
+
+    if [ -x $DAEMON ]; then
+      HOME="$HOMEDIR" start-stop-daemon -b -o -c $dbuser -S -u $dbuser -x $DAEMON -p "$HOMEDIR/.dropbox/dropbox.pid"
+    fi
+  done
+}
+
+stop() {
+  echo "Stopping dropbox..."
+    for dbuser in $DROPBOX_USERS; do
+      HOMEDIR=$(getent passwd $dbuser | cut -d: -f6)
+
+      DAEMON=$(find $HOMEDIR/.dropbox-dist/dropbox-lnx.* -name dropbox)
+
+      if [ -x $DAEMON ]; then
+        start-stop-daemon -o -c $dbuser -K -u $dbuser -x $DAEMON
+      fi
+  done
+}
+
+status() {
+  for dbuser in $DROPBOX_USERS; do
+    dbpid=$(pgrep -u $dbuser -f "dropbox-lnx")
+    if [ -z $dbpid ] ; then
+      echo "dropboxd for USER $dbuser: not running."
+    else
+      echo "dropboxd for USER $dbuser: running (pid $dbpid)"
+    fi
+ done
+}
+
+case "$1" in
+
+start)
+start
+;;
+
+stop)
+stop
+;;
+
+restart|reload|force-reload)
+
+stop
+start
+;;
+
+status)
+status
+;;
+
+*)
+echo "Usage: /etc/init.d/dropbox {start|stop|reload|force-reload|restart|status}"
+exit 1
+
+esac
+
+exit 0
